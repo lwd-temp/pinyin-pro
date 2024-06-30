@@ -1,13 +1,62 @@
-import { DoubleUnicodeReg } from './constant';
+import {
+  DoubleUnicodePrefixReg,
+  DoubleUnicodeSuffixReg,
+  DoubleUnicodeReg,
+} from "./constant";
 
-export function getStringLength(string: string) {
-  return string.replace(DoubleUnicodeReg, '_').length;
+export function stringLength(text: string) {
+  return text.length - (text.match(DoubleUnicodeReg)?.length || 0);
 }
 
-export function isZhChar(char: string) {
-  if (typeof char !== 'string') {
-    return false;
+// 双音节字符处理
+export function splitString(text: string): string[] {
+  const result = [];
+  let i = 0;
+  while (i < text.length) {
+    const char = text[i];
+    if (
+      DoubleUnicodePrefixReg.test(char) &&
+      DoubleUnicodeSuffixReg.test(text[i + 1])
+    ) {
+      result.push(text.substring(i, i + 2));
+      i += 2;
+    } else {
+      result.push(char);
+      i += 1;
+    }
   }
-  let code = char.charCodeAt(0);
-  return code >= 19968 && code <= 40869;
+  return result;
+}
+
+export class FastDictFactory {
+  NumberDICT: string[];
+  StringDICT: Map<string, string>;
+
+  constructor() {
+    this.NumberDICT = [];
+    this.StringDICT = new Map();
+  }
+
+  get(word: string): string {
+    if (word.length > 1) {
+      return this.StringDICT.get(word) as string;
+    } else {
+      const code = word.charCodeAt(0);
+      return this.NumberDICT[code];
+    }
+  }
+
+  set(word: string, pinyin: string) {
+    if (word.length > 1) {
+      this.StringDICT.set(word, pinyin);
+    } else {
+      const code = word.charCodeAt(0);
+      this.NumberDICT[code] = pinyin;
+    }
+  }
+
+  clear() {
+    this.NumberDICT = [];
+    this.StringDICT.clear();
+  }
 }

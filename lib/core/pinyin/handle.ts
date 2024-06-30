@@ -5,46 +5,46 @@ import {
   SpecialFinalList,
   doubleFinalList,
   processSepecialPinyin,
-} from '@/data/special';
-import Surnames from '@/data/surname';
-import DICT1 from '@/data/dict1';
-import { getCustomMultpileDict } from '@/core/custom';
-import type { SingleWordResult, PinyinMode } from '../../common/type';
-import { acTree, TokenizationAlgorithm } from '@/common/segmentit';
+} from "@/data/special";
+import Surnames from "@/data/surname";
+import DICT1 from "@/data/dict1";
+import { getCustomMultpileDict } from "@/core/custom";
+import { SingleWordResult } from "../../common/type";
+import type { SurnameMode } from "../../common/type";
+import { acTree, TokenizationAlgorithm } from "../../common/segmentit";
 import {
-  DoubleUnicodePrefixReg,
-  DoubleUnicodeSuffixReg,
   Priority,
-} from '@/common/constant';
+} from "@/common/constant";
+import { splitString } from "@/common/utils";
 
 /**
  * @description: 获取单个字符的拼音
- * @param {string} word
+ * @param {string} char
  * @return {string}
  */
-type GetSingleWordPinyin = (word: string) => string;
-export const getSingleWordPinyin: GetSingleWordPinyin = (word) => {
-  const wordCode = word.charCodeAt(0);
-  const pinyin = DICT1[wordCode];
+type GetSingleWordPinyin = (char: string) => string;
+export const getSingleWordPinyin: GetSingleWordPinyin = (char) => {
+  const pinyin = DICT1.get(char);
   // 若查到, 则返回第一个拼音; 若未查到, 返回原字符
-  return pinyin ? pinyin.split(' ')[0] : word;
+  return pinyin ? pinyin.split(" ")[0] : char;
 };
 
 export const getPinyin = (
   word: string,
   list: SingleWordResult[],
-  mode: 'normal' | 'surname',
-  segmentit: TokenizationAlgorithm,
+  surname: SurnameMode,
+  segmentit: TokenizationAlgorithm
 ): SingleWordResult[] => {
-  const matches = acTree.search(word, mode === 'surname', segmentit);
+  const matches = acTree.search(word, surname, segmentit);
   let matchIndex = 0;
-  for (let i = 0; i < word.length; ) {
+  const zhChars = splitString(word);
+  for (let i = 0; i < zhChars.length; ) {
     const match = matches[matchIndex];
     if (match && i === match.index) {
       if (match.length === 1 && match.priority <= Priority.Normal) {
-        const char = word[i];
-        let pinyin: string = '';
-        pinyin = processSepecialPinyin(char, word[i - 1], word[i + 1]);
+        const char = zhChars[i];
+        let pinyin: string = "";
+        pinyin = processSepecialPinyin(char, zhChars[i - 1], zhChars[i + 1]);
         list[i] = {
           origin: char,
           result: pinyin,
@@ -55,35 +55,24 @@ export const getPinyin = (
         matchIndex++;
         continue;
       }
-      const pinyins = match.pinyin.split(' ');
+      const pinyins = match.pinyin.split(" ");
       let pinyinIndex = 0;
       for (let j = 0; j < match.length; j++) {
-        if (
-          DoubleUnicodePrefixReg.test(match.zh[j - 1]) &&
-          DoubleUnicodeSuffixReg.test(match.zh[j])
-        ) {
-          list[i + j] = {
-            origin: match.zh[j],
-            result: '',
-            isZh: true,
-            originPinyin: '',
-          };
-        } else {
-          list[i + j] = {
-            origin: match.zh[j],
-            result: pinyins[pinyinIndex],
-            isZh: true,
-            originPinyin: pinyins[pinyinIndex],
-          };
-          pinyinIndex++;
-        }
+        const zhChars = splitString(match.zh);
+        list[i + j] = {
+          origin: zhChars[j],
+          result: pinyins[pinyinIndex],
+          isZh: true,
+          originPinyin: pinyins[pinyinIndex],
+        };
+        pinyinIndex++;
       }
       i += match.length;
       matchIndex++;
     } else {
-      const char = word[i];
-      let pinyin: string = '';
-      pinyin = processSepecialPinyin(char, word[i - 1], word[i + 1]);
+      const char = zhChars[i];
+      let pinyin: string = "";
+      pinyin = processSepecialPinyin(char, zhChars[i - 1], zhChars[i + 1]);
       list[i] = {
         origin: char,
         result: pinyin,
@@ -104,33 +93,30 @@ export const getPinyin = (
 type GetPinyinWithoutTone = (pinyin: string) => string;
 const getPinyinWithoutTone: GetPinyinWithoutTone = (pinyin) => {
   return pinyin
-    .replace(/(ā|á|ǎ|à)/g, 'a')
-    .replace(/(ō|ó|ǒ|ò)/g, 'o')
-    .replace(/(ē|é|ě|è)/g, 'e')
-    .replace(/(ī|í|ǐ|ì)/g, 'i')
-    .replace(/(ū|ú|ǔ|ù)/g, 'u')
-    .replace(/(ǖ|ǘ|ǚ|ǜ)/g, 'ü')
-    .replace(/(ń|ň|ǹ)/g, 'n')
-    .replace(/ḿ|m̀/g, 'm');
+    .replace(/(ā|á|ǎ|à)/g, "a")
+    .replace(/(ō|ó|ǒ|ò)/g, "o")
+    .replace(/(ē|é|ě|è)/g, "e")
+    .replace(/(ī|í|ǐ|ì)/g, "i")
+    .replace(/(ū|ú|ǔ|ù)/g, "u")
+    .replace(/(ǖ|ǘ|ǚ|ǜ)/g, "ü")
+    .replace(/(n̄|ń|ň|ǹ)/g, "n")
+    .replace(/(m̄|ḿ|m̌|m̀)/g, "m")
+    .replace(/(ê̄|ế|ê̌|ề)/g, "ê");
 };
 
 /**
  * @description: 获取单字符的多音拼音
- * @param {string} word
+ * @param {string} char
  * @return {WordResult[]}
  */
-type GetAllPinyin = (
-  word: string,
-  mode?: PinyinMode
-) => string[];
-export const getAllPinyin: GetAllPinyin = (word, mode = "normal") => {
-  const wordCode = word.charCodeAt(0);
+type GetAllPinyin = (char: string, surname?: SurnameMode) => string[];
+export const getAllPinyin: GetAllPinyin = (char, surname = "off") => {
   const customMultpileDict = getCustomMultpileDict();
-  let pinyin = DICT1[wordCode] ? DICT1[wordCode].split(" ") : [];
-  if (customMultpileDict[wordCode]) {
-    pinyin = customMultpileDict[wordCode].split(" ");
-  } else if (mode === "surname") {
-    const surnamePinyin = Surnames[word];
+  let pinyin = DICT1.get(char) ? DICT1.get(char).split(" ") : [];
+  if (customMultpileDict.get(char)) {
+    pinyin = customMultpileDict.get(char).split(" ");
+  } else if (surname !== "off") {
+    const surnamePinyin = Surnames[char];
     if (surnamePinyin) {
       pinyin = [surnamePinyin].concat(
         pinyin.filter((py) => py !== surnamePinyin)
@@ -147,10 +133,10 @@ export const getAllPinyin: GetAllPinyin = (word, mode = "normal") => {
  */
 type GetMultiplePinyin = (
   word: string,
-  mode?: PinyinMode
+  surname?: SurnameMode
 ) => SingleWordResult[];
-const getMultiplePinyin: GetMultiplePinyin = (word, mode = 'normal') => {
-  let pinyin = getAllPinyin(word, mode);
+const getMultiplePinyin: GetMultiplePinyin = (word, surname = "off") => {
+  let pinyin = getAllPinyin(word, surname);
   if (pinyin.length > 0) {
     return pinyin.map((value) => ({
       origin: word,
@@ -180,7 +166,7 @@ type GetInitialAndFinal = (pinyin: string) => {
   initial: string;
 };
 const getInitialAndFinal: GetInitialAndFinal = (pinyin) => {
-  const pinyin_arr = pinyin.split(' ');
+  const pinyin_arr = pinyin.split(" ");
   const initial_arr: string[] = [];
   const final_arr: string[] = [];
   for (let _pinyin of pinyin_arr) {
@@ -201,8 +187,8 @@ const getInitialAndFinal: GetInitialAndFinal = (pinyin) => {
     }
   }
   return {
-    final: final_arr.join(' '), // 韵母
-    initial: initial_arr.join(' '), // 声母
+    final: final_arr.join(" "), // 韵母
+    initial: initial_arr.join(" "), // 声母
   };
 };
 
@@ -218,16 +204,16 @@ type GetFinalParts = (pinyin: string) => {
 };
 const getFinalParts: GetFinalParts = (pinyin) => {
   const { final } = getInitialAndFinal(pinyin);
-  let head = '',
-    body = '',
-    tail = '';
+  let head = "",
+    body = "",
+    tail = "";
   if (doubleFinalList.indexOf(getPinyinWithoutTone(final)) !== -1) {
     head = final[0];
     body = final[1];
     tail = final.slice(2);
   } else {
-    body = final[0] || '';
-    tail = final.slice(1) || '';
+    body = final[0] || "";
+    tail = final.slice(1) || "";
   }
   return { head, body, tail };
 };
@@ -239,29 +225,32 @@ const getFinalParts: GetFinalParts = (pinyin) => {
  */
 type GetNumOfTone = (pinyin: string) => string;
 const getNumOfTone: GetNumOfTone = (pinyin) => {
-  const reg_tone1 = /(ā|ō|ē|ī|ū|ǖ)/;
-  const reg_tone2 = /(á|ó|é|í|ú|ǘ|ń|ḿ)/;
-  const reg_tone3 = /(ǎ|ǒ|ě|ǐ|ǔ|ǚ|ň)/;
-  const reg_tone4 = /(à|ò|è|ì|ù|ǜ|ǹ|m̀)/;
-  const reg_tone0 = /(a|o|e|i|u|ü|n)/;
+  const reg_tone1 = /(ā|ō|ē|ī|ū|ǖ|n̄|m̄|ê̄)/;
+  const reg_tone2 = /(á|ó|é|í|ú|ǘ|ń|ḿ|ế)/;
+  const reg_tone3 = /(ǎ|ǒ|ě|ǐ|ǔ|ǚ|ň|m̌|ê̌)/;
+  const reg_tone4 = /(à|ò|è|ì|ù|ǜ|ǹ|m̀|ề)/;
+  const reg_tone0 = /(a|o|e|i|u|ü|ê)/;
+  const special_tone = /(n|m)$/;
   const tone_num_arr: string[] = [];
-  const pinyin_arr = pinyin.split(' ');
+  const pinyin_arr = pinyin.split(" ");
   pinyin_arr.forEach((_pinyin) => {
     if (reg_tone1.test(_pinyin)) {
-      tone_num_arr.push('1');
+      tone_num_arr.push("1");
     } else if (reg_tone2.test(_pinyin)) {
-      tone_num_arr.push('2');
+      tone_num_arr.push("2");
     } else if (reg_tone3.test(_pinyin)) {
-      tone_num_arr.push('3');
+      tone_num_arr.push("3");
     } else if (reg_tone4.test(_pinyin)) {
-      tone_num_arr.push('4');
+      tone_num_arr.push("4");
     } else if (reg_tone0.test(_pinyin)) {
-      tone_num_arr.push('0');
+      tone_num_arr.push("0");
+    } else if (special_tone.test(_pinyin)) {
+      tone_num_arr.push("0");
     } else {
-      tone_num_arr.push('');
+      tone_num_arr.push("");
     }
   });
-  return tone_num_arr.join(' ');
+  return tone_num_arr.join(" ");
 };
 
 /**
@@ -272,13 +261,13 @@ const getNumOfTone: GetNumOfTone = (pinyin) => {
  */
 type GetPinyinWithNum = (pinyin: string, originPinyin: string) => string;
 const getPinyinWithNum: GetPinyinWithNum = (pinyin, originPinyin) => {
-  const pinyin_arr = getPinyinWithoutTone(pinyin).split(' ');
-  const tone_num_arr = getNumOfTone(originPinyin).split(' ');
+  const pinyin_arr = getPinyinWithoutTone(pinyin).split(" ");
+  const tone_num_arr = getNumOfTone(originPinyin).split(" ");
   const res_arr: string[] = [];
   pinyin_arr.forEach((item, index) => {
     res_arr.push(`${item}${tone_num_arr[index]}`);
   });
-  return res_arr.join(' ');
+  return res_arr.join(" ");
 };
 
 /**
@@ -289,11 +278,11 @@ const getPinyinWithNum: GetPinyinWithNum = (pinyin, originPinyin) => {
 type GetFirstLetter = (pinyin: string) => string;
 const getFirstLetter: GetFirstLetter = (pinyin) => {
   const first_letter_arr: string[] = [];
-  const pinyin_arr = pinyin.split(' ');
+  const pinyin_arr = pinyin.split(" ");
   pinyin_arr.forEach((pinyin) => {
     first_letter_arr.push(pinyin[0]);
   });
-  return first_letter_arr.join(' ');
+  return first_letter_arr.join(" ");
 };
 
 export {

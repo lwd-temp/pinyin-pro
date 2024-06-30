@@ -1,5 +1,7 @@
 import { Probability, Priority } from '@/common/constant';
+import { stringLength } from '@/common/utils';
 import type { Pattern } from  '../common/segmentit';
+
 const Surnames: { [key: string]: string } = {
   南宫: 'nán gōng',
   第五: 'dì wǔ',
@@ -492,14 +494,15 @@ const Surnames: { [key: string]: string } = {
   甯: 'nìng', // 如：周代有甯越，现在用作人名时也读四声，比如：张钧甯
   六: 'lù', // https://baike.baidu.com/item/%E5%85%AD%E5%A7%93/9394114
   啜: 'chuài', // https://baike.baidu.com/item/%E5%95%9C%E5%A7%93/9563772
+  行: 'xíng',
 };
 
 export default Surnames;
 export const PatternSurname: Pattern[] = Object.keys(Surnames).map((key) => ({
   zh: key,
   pinyin: Surnames[key],
-  probability: Probability.Surname + key.length,
-  length: key.length,
+  probability: Probability.Surname + stringLength(key),
+  length: stringLength(key),
   priority: Priority.Surname,
   dict: Symbol('surname'),
 }));

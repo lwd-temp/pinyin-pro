@@ -1,5 +1,43 @@
 # 更新日志
 
+# 3.23.0
+
+- 【feat】支持外部调用 `getInitialAndFinal`、`getFinalParts`、`getNumOfTone` 等 API [#255](https://github.com/zh-lx/pinyin-pro/pull/255)
+
+# 3.22.2
+
+- 【fix】修复 alias 导致的 `.d.ts` 文件报错 [#253](https://github.com/zh-lx/pinyin-pro/pull/253)
+
+# 3.22.1
+
+- 【patch】校正部分词库 [#252](https://github.com/zh-lx/pinyin-pro/pull/252)
+- 【perf】小幅优化性能 [#251](https://github.com/zh-lx/pinyin-pro/pull/251)
+
+# 3.22.0
+
+- 【feat】各 api 全面适配双 unicode 编码中文字符 [#242](https://github.com/zh-lx/pinyin-pro/pull/242)、[#243](https://github.com/zh-lx/pinyin-pro/pull/243)、[#247](https://github.com/zh-lx/pinyin-pro/pull/247)
+- 【feat】支持[《通用汉字规范表》](https://zh.wiktionary.org/wiki/Appendix:%E6%B1%89%E8%AF%AD%E6%8B%BC%E9%9F%B3%E7%B4%A2%E5%BC%95/%E9%80%9A%E7%94%A8%E8%A7%84%E8%8C%83%E6%B1%89%E5%AD%97%E8%A1%A8) 中所有字符 [#244](https://github.com/zh-lx/pinyin-pro/pull/244)
+- 【feat】支持叠字符 々 的发音 [#245](https://github.com/zh-lx/pinyin-pro/pull/245)
+- 【feat】支持 `êê̄ếê̌ề` 等拼音字符 [#248](https://github.com/zh-lx/pinyin-pro/pull/248)
+- 【patch】修正 `曲` 默认读音: [#249](https://github.com/zh-lx/pinyin-pro/pull/249)
+
+## 3.21.1
+
+- 【fix】修复 `surname: 'head'` 对于复姓不生效的问题
+
+## 3.21.0
+
+- 【feat】`pinyin` api 新增 `surname` 选项，支持只识别字符串开头的姓氏
+
+## 3.20.4
+
+- 【fix】修复 alias 导致的 ts 类型错误
+
+## 3.20.3
+
+- 【fix】修复 `convert` api 对于 `iu` 韵母声调转换不正确的问题
+- 【patch】修复部分字词读音，详见 [#232](https://github.com/zh-lx/pinyin-pro/pull/232)
+
 ## 3.20.2
 
 - 【fix】修复 `polyphonic` 和 `pinyin` 对非中文字符转换表现不一致的问题

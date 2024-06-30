@@ -7,7 +7,9 @@ import { PatternSurname } from "@/data/surname";
 import { maxProbability } from "./max-probability";
 import { minTokenization } from "./min-tokenization";
 import { reverseMaxMatch } from "./reverse-max-match";
-import { Priority } from '@/common/constant';
+import { Priority } from "@/common/constant";
+import type { SurnameMode } from "../type";
+import { splitString, stringLength } from "../utils";
 
 export const enum TokenizationAlgorithm {
   ReverseMaxMatch = 1,
@@ -41,7 +43,7 @@ class TrieNode {
   parent: TrieNode | null; // 父节点
   key: string; // 所在父节点的 key
 
-  constructor(parent: TrieNode | null, prefix: string = '', key = '') {
+  constructor(parent: TrieNode | null, prefix: string = "", key = "") {
     this.children = new Map();
     this.fail = null;
     this.patterns = [];
@@ -68,12 +70,12 @@ export class AC {
   // 构建 trie 树
   buildTrie(patternList: Pattern[]) {
     for (let pattern of patternList) {
-      const { zh } = pattern;
+      const zhChars = splitString(pattern.zh);
       let cur = this.root;
-      for (let i = 0; i < zh.length; i++) {
-        let c = zh.charAt(i);
+      for (let i = 0; i < zhChars.length; i++) {
+        let c = zhChars[i];
         if (!cur.children.has(c)) {
-          const trieNode = new TrieNode(cur, zh.slice(0, i), c);
+          const trieNode = new TrieNode(cur, zhChars.slice(0, i).join(''), c);
           cur.children.set(c, trieNode);
           this.addNodeToQueues(trieNode);
         }
@@ -89,14 +91,14 @@ export class AC {
   buildFailPointer() {
     let queue: TrieNode[] = [];
     let queueIndex = 0;
-    this.queues.forEach(_queue => {
+    this.queues.forEach((_queue) => {
       queue = queue.concat(_queue);
-    })
+    });
     this.queues = [];
 
     while (queue.length > queueIndex) {
       let node = queue[queueIndex++] as TrieNode;
-      let failNode = node.parent && node.parent.fail as TrieNode | null;
+      let failNode = node.parent && (node.parent.fail as TrieNode | null);
       let key = node.key;
 
       while (failNode && !failNode.children.has(key)) {
@@ -119,10 +121,10 @@ export class AC {
   }
 
   addNodeToQueues(trieNode: TrieNode) {
-    if (!this.queues[trieNode.prefix.length]) {
-      this.queues[trieNode.prefix.length] = [];
+    if (!this.queues[stringLength(trieNode.prefix)]) {
+      this.queues[stringLength(trieNode.prefix)] = [];
     }
-    this.queues[trieNode.prefix.length].push(trieNode);
+    this.queues[stringLength(trieNode.prefix)].push(trieNode);
   }
 
   // 按照优先级插入 pattern
@@ -157,11 +159,12 @@ export class AC {
   }
 
   // 搜索字符串返回匹配的模式串
-  match(text: string, isSurname = false) {
+  match(text: string, surname: SurnameMode) {
     let cur = this.root;
     let result: MatchPattern[] = [];
-    for (let i = 0; i < text.length; i++) {
-      let c = text.charAt(i);
+    const zhChars = splitString(text);
+    for (let i = 0; i < zhChars.length; i++) {
+      let c = zhChars[i];
 
       while (cur !== null && !cur.children.has(c)) {
         cur = cur.fail as TrieNode;
@@ -171,9 +174,15 @@ export class AC {
         cur = this.root;
       } else {
         cur = cur.children.get(c) as TrieNode;
-        const pattern = cur.patterns.find((item) =>
-          isSurname ? true : item.priority !== Priority.Surname
-        );
+        const pattern = cur.patterns.find((item) => {
+          if (surname === "off") {
+            return item.priority !== Priority.Surname;
+          } else if (surname === "head") {
+            return item.length - 1 - i === 0;
+          } else {
+            return true;
+          }
+        });
         if (pattern) {
           result.push({
             ...pattern,
@@ -182,9 +191,15 @@ export class AC {
         }
         let failNode = cur.fail;
         while (failNode !== null) {
-          const pattern = failNode.patterns.find((item) =>
-            isSurname ? true : item.priority !== Priority.Surname
-          );
+          const pattern = failNode.patterns.find((item) => {
+            if (surname === "off") {
+              return item.priority !== Priority.Surname;
+            } else if (surname === "head") {
+              return item.length - 1 - i === 0;
+            } else {
+              return true;
+            }
+          });
           if (pattern) {
             result.push({
               ...pattern,
@@ -200,16 +215,16 @@ export class AC {
 
   search(
     text: string,
-    isSurname = false,
+    surname: SurnameMode,
     algorithm: TokenizationAlgorithm = TokenizationAlgorithm.MaxProbability
   ) {
-    const patterns = this.match(text, isSurname);
+    const patterns = this.match(text, surname);
     if (algorithm === TokenizationAlgorithm.ReverseMaxMatch) {
       return reverseMaxMatch(patterns);
     } else if (algorithm === TokenizationAlgorithm.MinTokenization) {
-      return minTokenization(patterns, text.length);
+      return minTokenization(patterns, stringLength(text));
     }
-    return maxProbability(patterns, text.length);
+    return maxProbability(patterns, stringLength(text));
   }
 }
 

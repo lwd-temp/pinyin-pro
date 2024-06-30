@@ -57,4 +57,14 @@ describe('convert', () => {
     const result = convert('l2', { format: 'numToSymbol' });
     expect(result).to.be.equal('l2');
   });
+
+  it('[convert]numToSymbol iu', () => {
+    const result = convert('liu2', { format: 'numToSymbol' });
+    expect(result).to.be.equal('liú');
+  });
+
+  it('[convert]special tone', () => {
+    const result = convert('m̄ hm ê̄ ế ê̌ ề', { format: 'symbolToNum' });
+    expect(result).to.be.equal('m1 hm0 ê1 ê2 ê3 ê4');
+  });
 });

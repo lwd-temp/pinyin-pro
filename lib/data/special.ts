@@ -5,7 +5,8 @@ import {
   getNumOfTone,
   getPinyinWithoutTone,
 } from '@/core/pinyin/handle';
-import { isZhChar } from '@/common/utils';
+import DICT1 from './dict1';
+import { stringLength } from '@/common/utils';
 
 export const InitialList = [
   'zh',
@@ -167,7 +168,7 @@ export const PatternNumberDict: Pattern[] = Object.keys(NumberDict).map(
     zh: key,
     pinyin: NumberDict[key],
     probability: Probability.Rule,
-    length: key.length,
+    length: stringLength(key),
     priority: Priority.Normal,
     dict: Symbol('rule'),
   })
@@ -225,13 +226,25 @@ export function processToneSandhi(cur: string, pre: string, next: string) {
 
 // 处理「了」字的变调
 export function processToneSandhiLiao(cur: string, pre: string) {
-  if (cur === '了' && !isZhChar(pre)) {
+  if (cur === '了' && (!pre || !DICT1.get(pre))) {
     return 'liǎo';
+  }
+}
+
+// 处理叠字符[々]
+function processReduplicationChar(cur: string, pre: string) {
+  if (cur === '々') {
+    if (!pre || !DICT1.get(pre)) {
+      return 'tóng';
+    } else {
+      return DICT1.get(pre).split(' ')[0];
+    }
   }
 }
 
 export function processSepecialPinyin(cur: string, pre: string, next: string) {
   return (
+    processReduplicationChar(cur, pre) ||
     processToneSandhiLiao(cur, pre) ||
     processToneSandhi(cur, pre, next) ||
     getSingleWordPinyin(cur)
